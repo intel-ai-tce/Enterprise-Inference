@@ -73,8 +73,8 @@ spec:
           volumeMounts:
             - mountPath: /data
               name: model-volume
-            # - mountPath: /dev/shm
-            #   name: shm
+            - mountPath: /dev/shm
+              name: shm
             - mountPath: /tmp
               name: tmp
           ports:
@@ -113,10 +113,10 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        # - name: shm
-        #   emptyDir:
-        #     medium: Memory
-        #     sizeLimit: {{ .Values.shmSize }}
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.shmSize }}
         - name: tmp
           emptyDir: {}
       {{- with .Values.nodeSelector }}

@@ -21,11 +21,11 @@ accelDevice: ""
 port: 2080
 shmSize: 1Gi
 image:
-  repository: opea/vllm
+  repository: public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo
   # Uncomment the following line to set desired image pull policy if needed, as one of Always, IfNotPresent, Never.
   # pullPolicy: ""
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "1.2"
+  tag: "v0.9.1"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -49,7 +49,8 @@ podSecurityContext:
   runAsUser: 1001
 
 securityContext:
-  allowPrivilegeEscalation: false
+  privileged: true
+  allowPrivilegeEscalation: true
   capabilities:
     drop:
       - ALL
@@ -175,23 +176,33 @@ LLM_MODEL_ID: Intel/neural-chat-7b-v3-3
 
 # Environment variables for vLLM (set in configmap):
 # https://docs.vllm.ai/en/latest/getting_started/gaudi-installation.html#environment-variables
-OMPI_MCA_btl_vader_single_copy_mechanism: ""
-PT_HPU_ENABLE_LAZY_COLLECTIVES: ""
 VLLM_CPU_KVCACHE_SPACE: "40"
+VLLM_RPC_TIMEOUT: "100000"
+VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
+VLLM_ENGINE_ITERATION_TIMEOUT_S: "120"
+VLLM_CPU_NUM_OF_RESERVED_CPU: "0"
 VLLM_CONFIGURE_LOGGING: 1
 VLLM_NO_USAGE_STATS: 1
+DO_NOT_TRACK: 1
 
 modelConfigs:
-  model:
+  "model-id":
     configMapValues: {}
+  extraCmdArgs: []
+
 
 defaultModelConfigs:
   configMapValues:    
     OMPI_MCA_btl_vader_single_copy_mechanism: none
     PT_HPU_ENABLE_LAZY_COLLECTIVES: "true"
     VLLM_CPU_KVCACHE_SPACE: "40"
-  extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196"]
-  tensor_parallel_size: "1"
+    VLLM_RPC_TIMEOUT: "100000"
+    VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
+    VLLM_ENGINE_ITERATION_TIMEOUT_S: "120"
+    VLLM_CPU_NUM_OF_RESERVED_CPU: "0"
+  extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196", "--distributed_executor_backend", "mp", "--enable_chunked_prefill", "--enforce-eager"]
+  tensor_parallel_size: "4"
+  pipeline_parallel_size: "1"
 
 svcmonitor:
   enabled: false  
