@@ -27,6 +27,7 @@
     hugging_face_model_remove_name: 'false'
     gaudi_values_file: "{{ remote_helm_charts_base }}/vllm/gaudi-values.yaml"        
     huggingface_tensor_parellel_size: 'false'
+    huggingface_pipeline_parellel_size: 'false'
     vllm_metrics_enabled: 'false'
   gather_facts: false
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
@@ -215,6 +216,8 @@
             --set global.monitoring="{{ vllm_metrics_enabled }}"
             --set svcmonitor.enabled="{{ vllm_metrics_enabled }}"
             --set global.HUGGINGFACEHUB_API_TOKEN={{ hugging_face_token }}                        
+            --set tensor_parallel_size={{ huggingface_tensor_parellel_size }}
+            --set pipeline_parallel_size={{ huggingface_pipeline_parellel_size }}
             {% if apisix_enabled %}
               --set apisix.enabled={{ apisix_enabled }}
             {% endif %}

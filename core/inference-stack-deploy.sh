@@ -161,6 +161,7 @@ huggingface_model_deployment_name=""
 hugging_face_model_remove_deployment=""
 hugging_face_model_remove_name=""
 huggingface_tensor_parellel_size=""
+huggingface_pipeline_parellel_size=""
 
 
 
@@ -463,7 +464,7 @@ deploy_inference_llm_models_playbook() {
     tags=${tags%,}
         
     ansible-playbook -i "${INVENTORY_PATH}" playbooks/deploy-inference-models.yml \
-        --extra-vars "secret_name=${cluster_url} cert_file=${cert_file} key_file=${key_file} keycloak_admin_user=${keycloak_admin_user} keycloak_admin_password=${keycloak_admin_password} keycloak_client_id=${keycloak_client_id} hugging_face_token=${hugging_face_token} install_true=${install_true} model_name_list='${model_name_list//\ /,}' cpu_playbook=${cpu_playbook} gpu_playbook=${gpu_playbook} hugging_face_token_falcon3=${hugging_face_token_falcon3} deploy_keycloak=${deploy_keycloak} apisix_enabled=${apisix_enabled} ingress_enabled=${ingress_enabled} gaudi_deployment=${gaudi_deployment} huggingface_model_id=${huggingface_model_id} hugging_face_model_deployment=${hugging_face_model_deployment} huggingface_model_deployment_name=${huggingface_model_deployment_name} deploy_inference_llm_models_playbook=${deploy_inference_llm_models_playbook} huggingface_tensor_parellel_size=${huggingface_tensor_parellel_size} vllm_metrics_enabled=${vllm_metrics_enabled} " --tags "$tags"
+        --extra-vars "secret_name=${cluster_url} cert_file=${cert_file} key_file=${key_file} keycloak_admin_user=${keycloak_admin_user} keycloak_admin_password=${keycloak_admin_password} keycloak_client_id=${keycloak_client_id} hugging_face_token=${hugging_face_token} install_true=${install_true} model_name_list='${model_name_list//\ /,}' cpu_playbook=${cpu_playbook} gpu_playbook=${gpu_playbook} hugging_face_token_falcon3=${hugging_face_token_falcon3} deploy_keycloak=${deploy_keycloak} apisix_enabled=${apisix_enabled} ingress_enabled=${ingress_enabled} gaudi_deployment=${gaudi_deployment} huggingface_model_id=${huggingface_model_id} hugging_face_model_deployment=${hugging_face_model_deployment} huggingface_model_deployment_name=${huggingface_model_deployment_name} deploy_inference_llm_models_playbook=${deploy_inference_llm_models_playbook} huggingface_tensor_parellel_size=${huggingface_tensor_parellel_size} huggingface_pipeline_parellel_size=${huggingface_pipeline_parellel_size} vllm_metrics_enabled=${vllm_metrics_enabled} " --tags "$tags"
 }
 
 deploy_observability_playbook() {
@@ -1231,7 +1232,17 @@ deploy_from_huggingface() {
         if ! [[ "$huggingface_tensor_parellel_size" =~ ^[0-9]+$ ]]; then
             echo "Invalid input: Tensor Parallel size must be a positive integer."
             exit 1
-        fi 
+        fi
+    elif [ "$cpu_or_gpu" = "c" ]; then
+        read -p "Enter the Number of NUMA nodes for deployment:" -r huggingface_tensor_parellel_size        
+        if ! [[ "$huggingface_tensor_parellel_size" =~ ^[1-9]+$ ]]; then
+            echo "Invalid input: get NUMA node automatically."
+	    huggingface_tensor_parellel_size=$(lscpu | grep "NUMA node(s):" | awk '{print $3}')
+        fi
+	if [ "$huggingface_tensor_parellel_size" -eq 3 || "$huggingface_tensor_parellel_size" -eq 6 ]; then
+	    huggingface_pipeline_parellel_size=$(huggingface_tensor_parellel_size)
+	    huggingface_tensor_parellel_size=1
+        fi
     fi           
     if [ -n "$huggingface_model_deployment_name" ] && [ -n "$huggingface_model_id" ]; then
         read -p "${YELLOW}NOTICE: You are about to deploy a model directly from Hugging Face, which has not been pre-validated by our team. Do you wish to continue? (y/n) ${NC}" -r user_response
