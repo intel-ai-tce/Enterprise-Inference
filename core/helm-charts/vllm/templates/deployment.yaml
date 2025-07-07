@@ -54,7 +54,6 @@ spec:
           #   - |
           #     python3 -m vllm.entrypoints.openai.api_server --dtype {{ .Values.d_type }}  --model {{ .Values.LLM_MODEL_ID }} --port {{ .Values.port }} --tensor-parallel-size {{ .Values.tensor_parallel_size }} --block-size {{ .Values.block_size }} --max-model-len {{ .Values.max_model_len }} --disable-log-requests
           args:
-            {{- if .Values.accelDevice }}
             {{- $modelConfig := (index .Values.modelConfigs .Values.LLM_MODEL_ID | default dict) }}
             {{- $modelArgs := $modelConfig.extraCmdArgs | default .Values.defaultModelConfigs.extraCmdArgs }}
             {{- range $modelArgs }}
@@ -65,7 +64,6 @@ spec:
             # Ensure tensor_parallel_size is passed correctly as a number
             - "--tensor-parallel-size"
             - {{ .Values.tensor_parallel_size | default (index .Values.modelConfigs .Values.LLM_MODEL_ID | default dict).tensor_parallel_size | default .Values.defaultModelConfigs.tensor_parallel_size | quote}}
-            {{- end }}
             - "--model"
             - {{ .Values.LLM_MODEL_ID | quote }}
             - "--port"

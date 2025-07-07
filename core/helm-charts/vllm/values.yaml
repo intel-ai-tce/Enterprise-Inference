@@ -25,7 +25,7 @@ image:
   # Uncomment the following line to set desired image pull policy if needed, as one of Always, IfNotPresent, Never.
   # pullPolicy: ""
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.9.1"
+  tag: "v0.9.2"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -49,8 +49,7 @@ podSecurityContext:
   runAsUser: 1001
 
 securityContext:
-  privileged: true
-  allowPrivilegeEscalation: true
+  allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL
@@ -186,22 +185,26 @@ VLLM_NO_USAGE_STATS: 1
 DO_NOT_TRACK: 1
 
 modelConfigs:
-  "model-id":
-    configMapValues: {}
-  extraCmdArgs: []
-
-
-defaultModelConfigs:
-  configMapValues:    
-    OMPI_MCA_btl_vader_single_copy_mechanism: none
-    PT_HPU_ENABLE_LAZY_COLLECTIVES: "true"
+  "meta-llama/Meta-Llama-3.1-8B-Instruct":
+    configMapValues:
     VLLM_CPU_KVCACHE_SPACE: "40"
     VLLM_RPC_TIMEOUT: "100000"
     VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
     VLLM_ENGINE_ITERATION_TIMEOUT_S: "120"
     VLLM_CPU_NUM_OF_RESERVED_CPU: "0"
   extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196", "--distributed_executor_backend", "mp", "--enable_chunked_prefill", "--enforce-eager"]
-  tensor_parallel_size: "4"
+  tensor_parallel_size: "2"
+  pipeline_parallel_size: "1"  
+
+defaultModelConfigs:
+  configMapValues:    
+    VLLM_CPU_KVCACHE_SPACE: "40"
+    VLLM_RPC_TIMEOUT: "100000"
+    VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
+    VLLM_ENGINE_ITERATION_TIMEOUT_S: "120"
+    VLLM_CPU_NUM_OF_RESERVED_CPU: "0"
+  extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196", "--distributed_executor_backend", "mp", "--enable_chunked_prefill", "--enforce-eager"]
+  tensor_parallel_size: "2"
   pipeline_parallel_size: "1"
 
 svcmonitor:
