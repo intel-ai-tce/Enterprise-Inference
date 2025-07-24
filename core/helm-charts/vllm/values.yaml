@@ -182,6 +182,7 @@ VLLM_ENGINE_ITERATION_TIMEOUT_S: "120"
 VLLM_CPU_NUM_OF_RESERVED_CPU: "0"
 VLLM_CONFIGURE_LOGGING: 1
 VLLM_NO_USAGE_STATS: 1
+VLLM_CPU_SGL_KERNE: "1"
 DO_NOT_TRACK: 1
 
 modelConfigs:
@@ -192,7 +193,8 @@ modelConfigs:
     VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
     VLLM_ENGINE_ITERATION_TIMEOUT_S: "120"
     VLLM_CPU_NUM_OF_RESERVED_CPU: "0"
-  extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196", "--distributed_executor_backend", "mp", "--enable_chunked_prefill", "--enforce-eager"]
+    VLLM_CPU_SGL_KERNE: "1"
+  extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196", "--distributed_executor_backend", "mp", "--enable_chunked_prefill", "--enforce-eager", "--max-num-batched-tokens", "2048", "--max-num-seqs", "256"]
   tensor_parallel_size: "2"
   pipeline_parallel_size: "1"  
 
@@ -203,7 +205,8 @@ defaultModelConfigs:
     VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
     VLLM_ENGINE_ITERATION_TIMEOUT_S: "120"
     VLLM_CPU_NUM_OF_RESERVED_CPU: "0"
-  extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196", "--distributed_executor_backend", "mp", "--enable_chunked_prefill", "--enforce-eager"]
+    VLLM_CPU_SGL_KERNE: "1"
+  extraCmdArgs: ["--block-size", "128", "--dtype", "bfloat16", "--max-model-len","5196", "--distributed_executor_backend", "mp", "--enable_chunked_prefill", "--enforce-eager", "--max-num-batched-tokens", "2048", "--max-num-seqs", "256"]
   tensor_parallel_size: "2"
   pipeline_parallel_size: "1"
 
