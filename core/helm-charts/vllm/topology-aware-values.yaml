@@ -1,0 +1,12 @@
+# topology-aware-values.yaml
+# How to install:
+# helm repo add nri-plugins https://containers.github.io/nri-plugins
+# helm repo update
+# helm install topology-aware nri-plugins/nri-resource-policy-topology-aware \
+#  -n kube-system --create-namespace \
+#  -f topology-aware-values.yaml
+nri:
+  runtime:
+    patchConfig: true
+  plugin:
+    index: 10

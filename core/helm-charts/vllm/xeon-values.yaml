@@ -16,7 +16,11 @@ resources:
   requests:
     cpu: "{{ .Values.cpu }}"
     memory: "{{ .Values.memory }}"
+  limits:
+    cpu: "{{ .Values.cpu }}"
 
+podAnnotations:
+  prefer-shared-cpus.resource-policy.nri.io/pod: "false"
 
 # CPU-specific configurations
 block_size: 128
