@@ -27,7 +27,7 @@ generic_balloon:
 system_reserved_cpu_percent: 50
 
 # Minimum reserved CPUs for system processes
-min_reserved_cpus: 4
+min_reserved_cpus: 0
 
 # Temporary directory for configuration files
 tmp_dir: "/tmp/balloon-config"
