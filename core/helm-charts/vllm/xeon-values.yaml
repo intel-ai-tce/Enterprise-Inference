@@ -18,6 +18,7 @@ resources:
     memory: "{{ .Values.memory }}"
   limits:
     cpu: "{{ .Values.cpu }}"
+    memory: "{{ .Values.memory }}"
 
 podAnnotations:
   prefer-shared-cpus.resource-policy.nri.io/pod: "false"
