@@ -1,5 +1,15 @@
 # Copyright (C) 2024-2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
+# ---------------------------------------------------------------------
+# NRI Topology Aware: keep Keycloak on SHARED CPUs (NOT exclusive)
+# ---------------------------------------------------------------------
+podAnnotations:
+  prefer-shared-cpus.resource-policy.nri.io/pod: "true"
+
+# Some charts use "annotations" instead of "podAnnotations". Keep both for safety.
+annotations:
+  prefer-shared-cpus.resource-policy.nri.io/pod: "true"
+
 keycloakTokenRoute:
   host: ""
   path: /token
