@@ -5,10 +5,12 @@
 # ---------------------------------------------------------------------
 podAnnotations:
   prefer-shared-cpus.resource-policy.nri.io/pod: "true"
+  prefer-reserved-cpus.resource-policy.nri.io/pod: "true"
 
 # Some charts use "annotations" instead of "podAnnotations". Keep both for safety.
 annotations:
   prefer-shared-cpus.resource-policy.nri.io/pod: "true"
+  prefer-reserved-cpus.resource-policy.nri.io/pod: "true"
 
 keycloakTokenRoute:
   host: ""
