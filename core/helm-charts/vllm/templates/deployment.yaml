@@ -23,8 +23,10 @@ spec:
         balloon.balloons.resource-policy.nri.io: {{ .Values.cpu_balloon_annotation | quote }}
         {{- end }}
         {{- end }}
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
+      podAnnotations:
+        {{- if not .Values.accelDevice }}
+        prefer-shared-cpus.resource-policy.nri.io/pod: "false"
+        {{- end }}
       {{- end }}
       labels:
         {{- include "vllm.selectorLabels" . | nindent 8 }}
@@ -113,6 +115,13 @@ spec:
             {{- if not .Values.accelDevice }}
             {{- if or .Values.cpu .Values.memory }}
             requests:
+              {{- if .Values.cpu }}
+              cpu: {{ .Values.cpu | quote }}
+              {{- end }}
+              {{- if .Values.memory }}
+              memory: {{ .Values.memory | quote }}
+              {{- end }}
+            limits:
               {{- if .Values.cpu }}
               cpu: {{ .Values.cpu | quote }}
               {{- end }}

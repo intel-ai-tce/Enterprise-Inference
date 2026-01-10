@@ -4,7 +4,7 @@
 # Generic NRI Balloon Policy Template for vLLM Models (Simplified)
 config:
   reservedResources:
-    cpu: 1000m
+    cpu: "cpuset:{{ nri_reserved_cpu_list }}"
   allocatorTopologyBalancing: true
   reservedPoolNamespaces:
     - kube-system
