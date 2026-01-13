@@ -115,9 +115,6 @@ source "$SCRIPT_DIR/lib/cluster/nodes/add-node.sh"
 source "$SCRIPT_DIR/lib/cluster/nodes/remove-node.sh"
 source "$SCRIPT_DIR/lib/cluster/drv-fw-update.sh"
 
-# Xeon-specific optimizations
-source "$SCRIPT_DIR/lib/xeon/ballon-policy.sh"
-
 # Components deployment
 source "$SCRIPT_DIR/lib/components/kubernetes-setup.sh"
 source "$SCRIPT_DIR/lib/components/intel-base-operator.sh"
@@ -136,6 +133,9 @@ source "$SCRIPT_DIR/lib/models/install-model.sh"
 source "$SCRIPT_DIR/lib/models/uninstall-model.sh"
 source "$SCRIPT_DIR/lib/models/install-model-hf.sh"
 source "$SCRIPT_DIR/lib/models/uninstall-model-hf.sh"
+
+# Xeon-specific optimizations
+source "$SCRIPT_DIR/lib/xeon/ballon-policy.sh"
 
 # User interface
 source "$SCRIPT_DIR/lib/user-menu/parse-user-prompts.sh"

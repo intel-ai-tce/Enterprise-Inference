@@ -316,71 +316,47 @@
   ansible.builtin.set_fact:
     nri_reserved_cpus_per_numa: "{{ nri_reserved_cpus_per_numa | default(2) }}"
 
-- name: Compute nri_reserved_cpu_list (first N CPUs per NUMA node)
-  kubernetes.core.k8s_exec:
-    pod: "{{ optimizer_pod_name }}"
-    container: ubuntu
-    namespace: kube-system
-    command: >-
-      bash -c '
-      set -euo pipefail
-      total_numa={{ total_numa_nodes.stdout | int }};
-      n_per_numa={{ nri_reserved_cpus_per_numa | default(2) | int }};
-      if [ "$n_per_numa" -lt 1 ]; then
-        echo "ERROR: nri_reserved_cpus_per_numa must be >= 1 (got: $n_per_numa)" >&2
-        exit 2
-      fi
-
-      reserved="";
-      for i in $(seq 0 $((total_numa - 1))); do
-        numa_cpus=$(lscpu | grep "NUMA node$i CPU(s):" | cut -d: -f2 | xargs);
-        count=0;
-        picked="";
-
-        # Tokenize by comma, then expand ranges as needed.
-        for token in $(echo "$numa_cpus" | tr "," " "); do
-          if [[ "$token" == *-* ]]; then
-            start=${token%-*};
-            end=${token#*-};
-            for ((c=start; c<=end; c++)); do
-              picked="${picked}${c},";
-              count=$((count+1));
-              if [ "$count" -ge "$n_per_numa" ]; then
-                break 2;
-              fi
-            done
-          else
-            c=$token;
-            picked="${picked}${c},";
-            count=$((count+1));
-            if [ "$count" -ge "$n_per_numa" ]; then
-              break;
-            fi
-          fi
-        done
-
-        if [ "$count" -lt "$n_per_numa" ]; then
-          echo "ERROR: NUMA node $i has insufficient CPUs to pick $n_per_numa from: $numa_cpus" >&2
-          exit 3
-        fi
-
-        # Append this NUMA node’s selection to the global list.
-        reserved="${reserved}${picked}";
-      done
-
-      # Strip trailing comma and emit in a parse-friendly form.
-      reserved="${reserved%,}";
-      echo "NRI_RESERVED_CPU_LIST=${reserved}";
-      '
+- name: Compute nri_reserved_cpu_list via kubectl exec
+  ansible.builtin.command: >
+    kubectl -n kube-system exec {{ optimizer_pod_name }} -c ubuntu --
+    bash -c '
+    n={{ nri_reserved_cpus_per_numa | default(2) | int }};
+    lscpu -p=CPU,NODE | grep -v "^#" |
+    awk -F, -v N=$n "
+      { if (cnt[\$2] < N) { sel[\$2]=sel[\$2]\$1\",\"; cnt[\$2]++ } }
+      END {
+        out=\"\";
+        for (n in sel) { sub(/,$/,\"\",sel[n]); out=out sel[n] \",\" }
+        sub(/,$/,\"\",out);
+        print \"NRI_RESERVED_CPU_LIST=\" out
+      }"
+    '
   register: computed_reserved_cpu_list
+  changed_when: false
   tags:
     - install
 
 - name: Set nri_reserved_cpu_list fact
   ansible.builtin.set_fact:
-    nri_reserved_cpu_list: "{{ (computed_reserved_cpu_list.stdout_lines | select('match','^NRI_RESERVED_CPU_LIST=') | first).split('=')[1] }}"
-  tags:
-    - install
+    nri_reserved_cpu_list: >-
+      {{
+        (computed_reserved_cpu_list.stdout | default(''))
+        | regex_search('NRI_RESERVED_CPU_LIST=([0-9,]+)', '\1')
+        | default('')
+      }}
+
+- name: Assert nri_reserved_cpu_list computed
+  ansible.builtin.assert:
+    that:
+      - nri_reserved_cpu_list | length > 0
+    fail_msg: >-
+      Failed to compute nri_reserved_cpu_list.
+      stdout={{ computed_reserved_cpu_list.stdout | default('') }}
+      stderr={{ computed_reserved_cpu_list.stderr | default('') }}
+
+- name: Debug final nri_reserved_cpu_list
+  ansible.builtin.debug:
+    msg: "nri_reserved_cpu_list={{ nri_reserved_cpu_list }}"
 
 
 - name: Parse accurate CPU topology results
