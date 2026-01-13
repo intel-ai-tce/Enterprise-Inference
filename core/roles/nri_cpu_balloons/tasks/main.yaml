@@ -20,6 +20,21 @@
 # ============================================================================
 # Default Configuration
 # ============================================================================
+
+- name: Auto-compute nri_reserved_cpu_list if not provided
+  ansible.builtin.include_role:
+    name: utils
+    tasks_from: get_optimized_cpu_topology
+  when:
+    - nri_reserved_cpu_list is not defined or (nri_reserved_cpu_list | string | length) == 0
+
+- name: Validate nri_reserved_cpu_list
+  ansible.builtin.assert:
+    that:
+      - nri_reserved_cpu_list is defined
+      - (nri_reserved_cpu_list | regex_search('^[0-9]+([,-][0-9]+)*$')) is not none
+    fail_msg: "nri_reserved_cpu_list is missing or malformed. Expected cpuset syntax like '0,1,32,33'."
+
 - name: Set default NRI CPU balloons configuration if not defined
   ansible.builtin.set_fact:
     nri_cpu_balloons:
