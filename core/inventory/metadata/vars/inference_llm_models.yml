@@ -25,3 +25,4 @@ balloon_policy_cpu: 'None'
 gaudi_values_file: "{{ remote_helm_charts_base }}/vllm/gaudi-values.yaml"
 huggingface_tensor_parellel_size: 'false'
 vllm_metrics_enabled: 'false'
+nri_reserved_cpus_per_numa: 2

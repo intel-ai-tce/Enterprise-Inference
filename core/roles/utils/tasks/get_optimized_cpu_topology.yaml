@@ -312,10 +312,6 @@
   tags:
     - install
 
-- name: Set default nri_reserved_cpus_per_numa if not defined
-  ansible.builtin.set_fact:
-    nri_reserved_cpus_per_numa: "{{ nri_reserved_cpus_per_numa | default(2) }}"
-
 - name: Compute nri_reserved_cpu_list via kubectl exec
   ansible.builtin.command: >
     kubectl -n kube-system exec {{ optimizer_pod_name }} -c ubuntu --

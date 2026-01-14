@@ -36,8 +36,6 @@
     - name: Set default model parallelism configuration for CPU deployments
       ansible.builtin.set_fact:
         model_parallelism_config:
-          tensor_parallel_size: "{{ model_parallelism_config.tensor_parallel_size | default(1) }}"
-          pipeline_parallel_size: "{{ model_parallelism_config.pipeline_parallel_size | default(1) }}"
           strategy: "{{ model_parallelism_config.strategy | default('tensor_parallel') }}"
       when:
         - cpu_playbook == 'true'
@@ -277,48 +275,26 @@
               reserved_cpus_percentage: "{{ reserved_cpus_percentage | default(18) | int }}"
               reserved_cpus: >-
                 {%- set total_cpus = cpu_topology_config.cpus_per_socket | int -%}
-                {%- set percentage = reserved_cpus_percentage | default(18) | int -%}
-                {%- set calculated_reserved = ((total_cpus * percentage) / 100) | round(0, 'ceil') | int -%}
-                {%- set min_reserved = 2 -%}
-                {%- set max_reserved = total_cpus // 2 -%}
-                {%- if calculated_reserved < min_reserved -%}
-                {{ min_reserved }}
-                {%- elif calculated_reserved > max_reserved -%}
-                {{ max_reserved }}
-                {%- else -%}
+                {%- set total_numa = (cpu_topology_config.total_sockets | int) * (cpu_topology_config.numa_nodes_per_socket | int) -%}
+                {%- set calculated_reserved = (nri_reserved_cpus_per_numa | int) * total_numa -%}
+                {%- if calculated_reserved < 1 -%}{%- set calculated_reserved = 1 -%}{%- endif -%}
+                {%- if calculated_reserved >= total_cpus -%}{%- set calculated_reserved = total_cpus - 1 -%}{%- endif -%}
                 {{ calculated_reserved }}
-                {%- endif -%}
               balloon_cpus: >-
                 {%- set total_cpus = cpu_topology_config.cpus_per_socket | int -%}
-                {%- set percentage = reserved_cpus_percentage | default(18) | int -%}
-                {%- set calculated_reserved = ((total_cpus * percentage) / 100) | round(0, 'ceil') | int -%}
-                {%- set min_reserved = 2 -%}
-                {%- set max_reserved = total_cpus // 2 -%}
-                {%- if calculated_reserved < min_reserved -%}
-                {%- set final_reserved = min_reserved -%}
-                {%- elif calculated_reserved > max_reserved -%}
-                {%- set final_reserved = max_reserved -%}
-                {%- else -%}
+                {%- set total_numa = (cpu_topology_config.total_sockets | int) * (cpu_topology_config.numa_nodes_per_socket | int) -%}
+                {%- set calculated_reserved = (nri_reserved_cpus_per_numa | int) * total_numa -%}
+                {%- if calculated_reserved < 1 -%}{%- set calculated_reserved = 1 -%}{%- endif -%}
+                {%- if calculated_reserved >= total_cpus -%}{%- set calculated_reserved = total_cpus - 1 -%}{%- endif -%}
                 {%- set final_reserved = calculated_reserved -%}
-                {%- endif -%}
-                {%- if cpu_topology_config.total_sockets == 1 and cpu_topology_config.numa_nodes_per_socket == 1 -%}
-                {{ ((total_cpus - final_reserved) / 2) | int }}
-                {%- else -%}
                 {{ total_cpus - final_reserved }}
-                {%- endif -%}
               workload_cpus: >-
                 {%- set total_cpus = cpu_topology_config.cpus_per_socket | int -%}
-                {%- set percentage = reserved_cpus_percentage | default(18) | int -%}
-                {%- set calculated_reserved = ((total_cpus * percentage) / 100) | round(0, 'ceil') | int -%}
-                {%- set min_reserved = 2 -%}
-                {%- set max_reserved = total_cpus // 2 -%}
-                {%- if calculated_reserved < min_reserved -%}
-                {%- set final_reserved = min_reserved -%}
-                {%- elif calculated_reserved > max_reserved -%}
-                {%- set final_reserved = max_reserved -%}
-                {%- else -%}
+                {%- set total_numa = (cpu_topology_config.total_sockets | int) * (cpu_topology_config.numa_nodes_per_socket | int) -%}
+                {%- set calculated_reserved = (nri_reserved_cpus_per_numa | int) * total_numa -%}
+                {%- if calculated_reserved < 1 -%}{%- set calculated_reserved = 1 -%}{%- endif -%}
+                {%- if calculated_reserved >= total_cpus -%}{%- set calculated_reserved = total_cpus - 1 -%}{%- endif -%}
                 {%- set final_reserved = calculated_reserved -%}
-                {%- endif -%}
                 {{ total_cpus - final_reserved }}
 
         - name: Calculate parallelism configuration
@@ -354,7 +330,6 @@
               - "NUMA Nodes per Socket: {{ optimal_balloon_config.numa_nodes_per_socket }}"
               - "CPUs per Socket: {{ optimal_balloon_config.cpus_per_socket }}"
               - "Is Single Node: {{ optimal_balloon_config.is_single_node }}"
-              - "Reserved CPUs Percentage: {{ optimal_balloon_config.reserved_cpus_percentage }}%"
               - "Reserved CPUs Count: {{ optimal_balloon_config.reserved_cpus }} ({{ ((optimal_balloon_config.reserved_cpus | int / optimal_balloon_config.cpus_per_socket | int) * 100) | round(1) }}% actual)"
               - "Workload CPUs (for xeon-values.yaml): {{ optimal_balloon_config.workload_cpus }}"
               - "Balloon CPUs: {{ optimal_balloon_config.balloon_cpus }}"
@@ -414,6 +389,15 @@
               Socket 0 memory available: {{ socket0_memory_gb }} GB
               Final memory for deployment: {{ optimal_memory_gb }} GB
               Min threshold: 8 GB, Max threshold: 256 GB
+
+        - name: Apply optimized TP/PP defaults (unless user overrides)
+          ansible.builtin.set_fact:
+            tensor_parallel_size: "{{ tensor_parallel_size |  default(optimal_balloon_config.get('tensor_parallel_size', 1)) | int }}"
+            pipeline_parallel_size: "{{ pipeline_parallel_size | default(optimal_balloon_config.get('pipeline_parallel_size', 1)) | int }}"
+          when:
+            - cpu_playbook == 'true'
+          tags: always
+          run_once: true
 
         - name: Display CPU optimization helm charts update completion
           debug:
@@ -1991,8 +1975,8 @@
             --set podLabels.name="vllm"
             --set cpu="{{ optimal_balloon_config.workload_cpus | default(8) }}"
             --set memory="{{ optimal_memory_gb | default(8) }}Gi"
-            --set tensor_parallel_size={{ model_parallelism_config.tensor_parallel_size | default(1) }}
-            --set pipeline_parallel_size={{ model_parallelism_config.pipeline_parallel_size | default(1) }}
+            --set tensor_parallel_size={{ tensor_parallel_size | default(1) }}
+            --set pipeline_parallel_size={{ pipeline_parallel_size | default(1) }}
             {% endif %}
             {% if apisix_enabled %}
               --set apisix.enabled={{ apisix_enabled }}
@@ -2094,8 +2078,8 @@
             --set podLabels.name="vllm"
             --set cpu="{{ optimal_balloon_config.workload_cpus | default(8) }}"
             --set memory="{{ optimal_memory_gb | default(8) }}Gi"
-            --set tensor_parallel_size={{ model_parallelism_config.tensor_parallel_size | default(1) }}
-            --set pipeline_parallel_size={{ model_parallelism_config.pipeline_parallel_size | default(1) }}
+            --set tensor_parallel_size={{ model_paralletensor_parallel_size | default(1) }}
+            --set pipeline_parallel_size={{ pipeline_parallel_size | default(1) }}
             {% endif %}
             {% if apisix_enabled %}
               --set apisix.enabled={{ apisix_enabled }}
@@ -2196,8 +2180,8 @@
             --set podLabels.name="vllm"
             --set cpu="{{ optimal_balloon_config.workload_cpus | default(8) }}"
             --set memory="{{ optimal_memory_gb | default(8) }}Gi"
-            --set tensor_parallel_size={{ model_parallelism_config.tensor_parallel_size | default(1) }}
-            --set pipeline_parallel_size={{ model_parallelism_config.pipeline_parallel_size | default(1) }}
+            --set tensor_parallel_size={{ tensor_parallel_size | default(1) }}
+            --set pipeline_parallel_size={{ pipeline_parallel_size | default(1) }}
             {% endif %}
             {% if apisix_enabled %}
               --set apisix.enabled={{ apisix_enabled }}
@@ -2301,8 +2285,8 @@
             --set podLabels.name="vllm"
             --set cpu="{{ optimal_balloon_config.workload_cpus | default(8) }}"
             --set memory="{{ optimal_memory_gb | default(8) }}Gi"
-            --set tensor_parallel_size={{ model_parallelism_config.tensor_parallel_size | default(1) }}
-            --set pipeline_parallel_size={{ model_parallelism_config.pipeline_parallel_size | default(1) }}
+            --set tensor_parallel_size={{ tensor_parallel_size | default(1) }}
+            --set pipeline_parallel_size={{ pipeline_parallel_size | default(1) }}
             {% endif %}
             {% if apisix_enabled %}
               --set apisix.enabled={{ apisix_enabled }}
@@ -2411,8 +2395,8 @@
             --set podLabels.name="vllm"
             --set cpu="{{ optimal_balloon_config.workload_cpus | default(8) }}"
             --set memory="{{ optimal_memory_gb | default(8) }}Gi"
-            --set tensor_parallel_size={{ model_parallelism_config.tensor_parallel_size | default(1) }}
-            --set pipeline_parallel_size={{ model_parallelism_config.pipeline_parallel_size | default(1) }}
+            --set tensor_parallel_size={{ tensor_parallel_size | default(1) }}
+            --set pipeline_parallel_size={{ pipeline_parallel_size | default(1) }}
             {% endif %}
             {% if apisix_enabled %}
               --set apisix.enabled={{ apisix_enabled }}
@@ -2516,8 +2500,8 @@
             --set podLabels.name="vllm"
             --set cpu="{{ optimal_balloon_config.workload_cpus | default(8) }}"
             --set memory="{{ optimal_memory_gb | default(8) }}Gi"
-            --set tensor_parallel_size={{ model_parallelism_config.tensor_parallel_size | default(1) }}
-            --set pipeline_parallel_size={{ model_parallelism_config.pipeline_parallel_size | default(1) }}
+            --set tensor_parallel_size={{ tensor_parallel_size | default(1) }}
+            --set pipeline_parallel_size={{ pipeline_parallel_size | default(1) }}
             {% endif %}
             {% if apisix_enabled %}
               --set apisix.enabled={{ apisix_enabled }}
