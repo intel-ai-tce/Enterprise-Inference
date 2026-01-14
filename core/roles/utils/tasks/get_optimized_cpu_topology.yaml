@@ -225,6 +225,17 @@
   tags:
     - install
 
+- name: Refresh node-topology-optimizer pod name (avoid stale pod references)
+  ansible.builtin.command: >
+    kubectl -n kube-system get pods -l app=node-topology-optimizer
+    -o jsonpath='{.items[0].metadata.name}'
+  register: optimizer_pod_name_refresh
+  changed_when: false
+
+- name: Set refreshed optimizer_pod_name
+  ansible.builtin.set_fact:
+    optimizer_pod_name: "{{ optimizer_pod_name_refresh.stdout | trim }}"
+    
 - name: Get detailed CPU information
   kubernetes.core.k8s_exec:
     pod: "{{ optimizer_pod_name }}"
@@ -336,9 +347,10 @@
   ansible.builtin.set_fact:
     nri_reserved_cpu_list: >-
       {{
-        (computed_reserved_cpu_list.stdout | default(''))
-        | regex_search('NRI_RESERVED_CPU_LIST=([0-9,]+)', '\1')
-        | default('')
+        (computed_reserved_cpu_list.stdout | default('') | trim)
+        | regex_replace('^.*NRI_RESERVED_CPU_LIST=', '')
+        | regex_replace('\\s.*$', '')
+        | regex_replace(',+$', '')
       }}
 
 - name: Assert nri_reserved_cpu_list computed

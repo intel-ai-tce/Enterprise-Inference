@@ -28,6 +28,10 @@
   when:
     - nri_reserved_cpu_list is not defined or (nri_reserved_cpu_list | string | length) == 0
 
+- name: Debug normalized nri_reserved_cpu_list
+  ansible.builtin.debug:
+    msg: "nri_reserved_cpu_list={{ nri_reserved_cpu_list }}"
+
 - name: Validate nri_reserved_cpu_list
   ansible.builtin.assert:
     that:
