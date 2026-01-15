@@ -323,25 +323,40 @@
   tags:
     - install
 
-- name: Compute nri_reserved_cpu_list via kubectl exec
+- name: Compute nri_reserved_cpu_list from NUMA segment heads
   ansible.builtin.command: >
     kubectl -n kube-system exec {{ optimizer_pod_name }} -c ubuntu --
     bash -c '
-    n={{ nri_reserved_cpus_per_numa | default(2) | int }};
-    lscpu -p=CPU,NODE | grep -v "^#" |
-    awk -F, -v N=$n "
-      { if (cnt[\$2] < N) { sel[\$2]=sel[\$2]\$1\",\"; cnt[\$2]++ } }
-      END {
-        out=\"\";
-        for (n in sel) { sub(/,$/,\"\",sel[n]); out=out sel[n] \",\" }
-        sub(/,$/,\"\",out);
-        print \"NRI_RESERVED_CPU_LIST=\" out
-      }"
+      set -euo pipefail
+      total_numa=$(lscpu | awk -F: "/NUMA node\\(s\\):/ {gsub(/ /,\"\",\$2); print \$2}")
+      [ -n "$total_numa" ] || { echo "ERROR: cannot detect NUMA node(s)" >&2; exit 1; }
+
+      out=""
+      for i in $(seq 0 $((total_numa - 1))); do
+        line=$(lscpu | awk -v n="$i" -F: "\$1 ~ \"NUMA node\"n\" CPU\\\\(s\\\\)\" {print \$2}")
+        line=$(echo "$line" | xargs)  # trim
+        [ -n "$line" ] || { echo "ERROR: cannot read NUMA node$i CPU(s)" >&2; exit 1; }
+
+        # Split by comma, take head of each segment
+        segheads=$(echo "$line" | awk -F, "{
+          for (j=1; j<=NF; j++) {
+            split(\$j,a,\"-\");
+            gsub(/ /,\"\",a[1]);
+            if (a[1] != \"\") printf a[1] \",\";
+          }
+        }" | sed "s/,\$//")
+
+        out="${out}${segheads},"
+      done
+      out="${out%,}"
+      echo "NRI_RESERVED_CPU_LIST=$out"
     '
   register: computed_reserved_cpu_list
   changed_when: false
   tags:
     - install
+
+
 
 - name: Set nri_reserved_cpu_list fact
   ansible.builtin.set_fact:
