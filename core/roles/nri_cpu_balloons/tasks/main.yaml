@@ -343,6 +343,19 @@
   tags:
     - install
 
+- name: Debug decision state before base_config initialization
+  ansible.builtin.debug:
+    msg:
+      - "existing_config_empty={{ existing_config == {} }}"
+      - "existing_config_keys={{ existing_config.keys() | default([]) }}"
+      - "vllm_balloon_exists={{ vllm_balloon_exists }}"
+      - "balloon_needs_update={{ balloon_needs_update | default(false) }}"
+      - "nri_reserved_cpu_list={{ nri_reserved_cpu_list }}"
+      - "enable_prometheus={{ enable_prometheus | default(false) }}"
+  tags:
+    - install
+
+
 - name: Initialize base configuration if none exists
   ansible.builtin.set_fact:
     base_config:
@@ -386,6 +399,19 @@
     - existing_config != {}
   tags:
     - install
+
+- name: Force reservedResources.cpu to computed cpuset in base_config
+  ansible.builtin.set_fact:
+    base_config: >-
+      {{
+        base_config | combine(
+          {'config': {'reservedResources': {'cpu': 'cpuset:' ~ nri_reserved_cpu_list}}},
+          recursive=True
+        )
+      }}
+  when: not vllm_balloon_exists or balloon_needs_update | default(false)
+  tags:
+    - install      
 
 - name: Remove existing balloon if updating
   ansible.builtin.set_fact:
