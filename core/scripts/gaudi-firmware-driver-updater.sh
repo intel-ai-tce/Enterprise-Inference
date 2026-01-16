@@ -6,8 +6,7 @@ YELLOW=$(tput setaf 3)
 BLUE=$(tput setaf 4)
 NC=$(tput sgr0)  # Reset color
 
-# Copyright (C) 2024-2025 Intel Corporation
-# SPDX-License-Identifier: Apache-2.0
+# ©2025 Intel Corporation
 # Permission is granted for recipient to internally use and modify this software for purposes of benchmarking and testing on Intel architectures. 
 # This software is provided "AS IS" possibly with faults, bugs or errors; it is not intended for production use, and recipient uses this design at their own risk with no liability to Intel.
 # Intel disclaims all warranties, express or implied, including warranties of merchantability, fitness for a particular purpose, and non-infringement. 
