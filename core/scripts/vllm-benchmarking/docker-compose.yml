@@ -15,7 +15,9 @@ services:
       HF_TOKEN: ${HF_TOKEN}
       VLLM_CPU_KVCACHE_SPACE: 40
       HF_HOME: /mnt/hf_cache
-      ON_CPU: 1
+      REMOTE_HOST: ${REMOTE_HOST}
+      REMOTE_PORT: ${REMOTE_PORT}
+      ON_CPU: ${ON_CPU}
       #SERVING_JSON: serving-tests-cpu-snc3.json
     entrypoint: ["bash", "/workspace/.buildkite/performance-benchmarks/scripts/run-performance-benchmarks.sh"]
 
