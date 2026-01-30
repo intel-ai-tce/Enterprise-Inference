@@ -33,6 +33,13 @@ if [[ ! -f "$SRC_CFG" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
+if [[ ! -w "$(dirname "$DST_DIR")" ]]; then
+  echo "ERROR: No permission to create $DST_DIR"
+  echo "       Run once with sudo:"
+  echo "         sudo mkdir -p $DST_DIR && sudo chown \$USER:\$USER $DST_DIR"
+  return 1 2>/dev/null || exit 1
+fi
+
 mkdir -p "$DST_DIR"
 
 if [[ ! -f "$DST_CFG" ]]; then
