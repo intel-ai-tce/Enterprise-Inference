@@ -1,0 +1,41 @@
+# IMPORTANT: Do NOT include keyword "vllm" anywhere in names/labels for this benchmark pod
+# so it is scheduled onto reserved CPUs under the balloons policy.
+
+nameOverride: "ci-benchmark-cpu"
+
+image:
+  repository: public.ecr.aws/q9t5s3a7/vllm-ci-test-repo
+  tag: 7f42dc20bb2800d09faa72b26f25d54e26f1b694-cpu
+  pullPolicy: IfNotPresent
+
+# Host paths (node-local)
+hostPaths:
+  hfCache: /mnt/hf_cache
+  results: /mnt/ci_bench_results
+  servingJson: /mnt/bench_cfg/serving-tests-cpu.json  # file must exist on the node
+
+shm:
+  sizeLimit: 128Gi
+
+env:
+  no_proxy: ""
+  http_proxy: ""
+  https_proxy: ""
+
+  HF_TOKEN: ""                 # recommend secret; kept for parity with docker-compose
+  VLLM_CPU_KVCACHE_SPACE: "40"
+  HF_HOME: "/mnt/hf_cache"
+
+  REMOTE_HOST: ""
+  REMOTE_PORT: ""
+  ON_CPU: "1"
+
+# Optional resources
+resources: {}
+# resources:
+#   requests:
+#     cpu: "8"
+#     memory: "64Gi"
+#   limits:
+#     cpu: "8"
+#     memory: "64Gi"

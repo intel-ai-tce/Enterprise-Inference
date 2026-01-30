@@ -1,0 +1,80 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.nameOverride | default .Release.Name }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.nameOverride | default .Release.Name }}
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.nameOverride | default .Release.Name }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: benchmark
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["bash", "/workspace/.buildkite/performance-benchmarks/scripts/run-performance-benchmarks.sh"]
+
+          env:
+            - name: no_proxy
+              value: {{ .Values.env.no_proxy | quote }}
+            - name: http_proxy
+              value: {{ .Values.env.http_proxy | quote }}
+            - name: https_proxy
+              value: {{ .Values.env.https_proxy | quote }}
+
+            - name: HF_TOKEN
+              value: {{ .Values.env.HF_TOKEN | quote }}
+            - name: VLLM_CPU_KVCACHE_SPACE
+              value: {{ .Values.env.VLLM_CPU_KVCACHE_SPACE | quote }}
+            - name: HF_HOME
+              value: {{ .Values.env.HF_HOME | quote }}
+
+            - name: REMOTE_HOST
+              value: {{ .Values.env.REMOTE_HOST | quote }}
+            - name: REMOTE_PORT
+              value: {{ .Values.env.REMOTE_PORT | quote }}
+            - name: ON_CPU
+              value: {{ .Values.env.ON_CPU | quote }}
+
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /mnt/hf_cache
+
+            - name: serving-json
+              mountPath: /workspace/.buildkite/performance-benchmarks/tests/serving-tests-cpu.json
+              subPath: serving-tests-cpu.json
+              readOnly: true
+
+            - name: results
+              mountPath: /workspace/benchmarks/results
+
+            - name: dshm
+              mountPath: /dev/shm
+
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: {{ .Values.hostPaths.hfCache | quote }}
+            type: DirectoryOrCreate
+
+        - name: results
+          hostPath:
+            path: {{ .Values.hostPaths.results | quote }}
+            type: DirectoryOrCreate
+
+        - name: serving-json
+          hostPath:
+            path: {{ .Values.hostPaths.servingJson | quote }}
+            type: File
+
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.shm.sizeLimit | quote }}
