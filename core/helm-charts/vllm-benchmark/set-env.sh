@@ -33,14 +33,23 @@ if [[ ! -f "$SRC_CFG" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
-if [[ ! -w "$(dirname "$DST_DIR")" ]]; then
-  echo "ERROR: No permission to create $DST_DIR"
-  echo "       Run once with sudo:"
-  echo "         sudo mkdir -p $DST_DIR && sudo chown \$USER:\$USER $DST_DIR"
-  return 1 2>/dev/null || exit 1
+if [[ -d "$DST_DIR" ]]; then
+  # Directory exists: we only need write permission to it
+  if [[ ! -w "$DST_DIR" ]]; then
+    echo "ERROR: No write permission to existing directory: $DST_DIR" >&2
+    ls -ld "$DST_DIR" >&2 || true
+    return 1 2>/dev/null || exit 1
+  fi
+else
+  # Directory does not exist: we need permission to create it under parent
+  PARENT_DIR="$(dirname "$DST_DIR")"
+  if [[ ! -w "$PARENT_DIR" ]]; then
+    echo "ERROR: No permission to create $DST_DIR under $PARENT_DIR" >&2
+    echo "       Fix (one-time): sudo mkdir -p $DST_DIR && sudo chown \$USER:\$USER $DST_DIR" >&2
+    return 1 2>/dev/null || exit 1
+  fi
+  mkdir -p "$DST_DIR"
 fi
-
-mkdir -p "$DST_DIR"
 
 if [[ ! -f "$DST_CFG" ]]; then
   cp "$SRC_CFG" "$DST_CFG"
@@ -48,6 +57,7 @@ if [[ ! -f "$DST_CFG" ]]; then
 else
   echo "Benchmark config already exists at $DST_CFG (skipping copy)"
 fi
+
 
 # ---- Query Service ------------------------------------------------------------
 REMOTE_HOST="$(kubectl get svc "$SERVICE_NAME" -n "$NAMESPACE" \
