@@ -89,9 +89,9 @@ hostPaths:
 
 ```bash
 helm install ci-bench ./ci-benchmark \
-  --set env.REMOTE_HOST=10.233.45.251 \
-  --set env.REMOTE_PORT=80 \
-  --set env.ON_CPU=1
+  --set env.REMOTE_HOST="$REMOTE_HOST" \
+  --set env.REMOTE_PORT="$REMOTE_PORT" \
+  --set env.ON_CPU="$ON_CPU"
 ```
 
 ---
