@@ -12,10 +12,19 @@ image:
 hostPaths:
   hfCache: /mnt/hf_cache
   results: /mnt/ci_bench_results
-  servingJson: /mnt/bench_cfg/serving-tests-cpu.json  # file must exist on the node
 
 shm:
   sizeLimit: 128Gi
+
+# serving-tests-cpu.json will be embedded into a ConfigMap.
+# EITHER:
+#   (Recommended) provide it at install time:
+#     helm install ... --set-file servingTestsJson=./serving-tests-cpu.json
+# OR:
+#   paste its JSON content below (multi-line block).
+servingTestsJson: |-
+  {}
+  # Replace with the real JSON, or use --set-file servingTestsJson=./serving-tests-cpu.json
 
 env:
   no_proxy: ""
@@ -32,10 +41,3 @@ env:
 
 # Optional resources
 resources: {}
-# resources:
-#   requests:
-#     cpu: "8"
-#     memory: "64Gi"
-#   limits:
-#     cpu: "8"
-#     memory: "64Gi"

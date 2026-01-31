@@ -44,6 +44,7 @@ spec:
             - name: hf-cache
               mountPath: /mnt/hf_cache
 
+            # serving-tests-cpu.json projected from ConfigMap -> exact file path, read-only
             - name: serving-json
               mountPath: /workspace/.buildkite/performance-benchmarks/tests/serving-tests-cpu.json
               subPath: serving-tests-cpu.json
@@ -70,9 +71,8 @@ spec:
             type: DirectoryOrCreate
 
         - name: serving-json
-          hostPath:
-            path: {{ .Values.hostPaths.servingJson | quote }}
-            type: File
+          configMap:
+            name: {{ .Values.nameOverride | default .Release.Name }}-serving-tests
 
         - name: dshm
           emptyDir:
